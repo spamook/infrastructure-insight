@@ -1,1 +1,90 @@
 ---
+- name: Allow port 8080 (Jenkins UI)
+  ufw:
+    rule: allow
+    port: '8080'
+    proto: tcp
+
+- name: Allow port 5000 (Docker registry)
+  ufw:
+    rule: allow
+    port: '5000'
+    proto: tcp
+
+- name: Install Java 17
+  apt:
+    name: openjdk-17-jdk
+    state: present
+- name: Add Jenkins apt key
+  apt_key:
+    url: https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+    state: present
+
+- name: Add Jenkins repository
+  apt_repository:
+    repo: 'deb https://pkg.jenkins.io/debian-stable binary/'
+    state: present
+    update_cache: yes
+
+- name: Install Jenkins
+  apt:
+    name: jenkins
+    state: present
+
+- name: Skip Jenkins setup wizard
+  lineinfile:
+    path: /etc/default/jenkins
+    regexp: '^JAVA_ARGS='
+    line: 'JAVA_ARGS="-Djava.awt.headless=true -Djenkins.install.runSetupWizard=false"'
+    create: yes
+
+- name: Enable and start Jenkins
+  service:
+    name: jenkins
+    state: started
+    enabled: yes
+
+- name: Add jenkins user to docker group
+  user:
+    name: jenkins
+    groups: docker
+    append: yes
+- name: Start local Docker registry
+  shell: |
+    docker run -d \
+      --name registry \
+      --restart unless-stopped \
+      -p 5000:5000 \
+      -v /var/lib/registry:/var/lib/registry \
+      registry:2
+  args:
+    creates: /var/lib/registry
+
+- name: Create Jenkins SSH directory
+  file:
+    path: /var/lib/jenkins/.ssh
+    state: directory
+    owner: jenkins
+    group: jenkins
+    mode: '0700'
+
+- name: Copy Jenkins private deploy key
+  copy:
+    src: /vagrant/ansible/files/jenkins_key
+    dest: /var/lib/jenkins/.ssh/id_ed25519
+    owner: jenkins
+    group: jenkins
+    mode: '0600'
+    remote_src: yes
+
+- name: Add servers to Jenkins known_hosts
+  shell: |
+    ssh-keyscan -H 192.168.56.11 >> /var/lib/jenkins/.ssh/known_hosts
+    ssh-keyscan -H 192.168.56.12 >> /var/lib/jenkins/.ssh/known_hosts
+    ssh-keyscan -H 192.168.56.13 >> /var/lib/jenkins/.ssh/known_hosts
+  become_user: jenkins
+
+- name: Restart Jenkins to pick up docker group
+  service:
+    name: jenkins
+    state: restarted

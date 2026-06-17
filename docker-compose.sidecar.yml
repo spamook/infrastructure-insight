@@ -1,0 +1,14 @@
+version: '3.9'
+
+
+services:
+  metrics-sidecar:
+    build:
+      context: ./backend
+    container_name: infra-sidecar
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001

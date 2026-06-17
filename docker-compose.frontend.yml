@@ -1,0 +1,15 @@
+version: '3.9'
+
+
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+    container_name: infra-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      - BACKEND_HOST=${BACKEND_HOST:-app-server}  # IP или hostname app-server
+      - BACKEND_PORT=3001

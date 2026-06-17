@@ -1,1 +1,33 @@
 ---
+- name: Allow port 80 from load balancer
+  ufw:
+    rule: allow
+    src: '192.168.56.10'
+    port: '80'
+    proto: tcp
+
+- name: Allow port 3001 from load balancer (metrics sidecar)
+  ufw:
+    rule: allow
+    src: '192.168.56.10'
+    port: '3001'
+    proto: tcp
+
+- name: Create .env file with backend host
+  copy:
+    dest: /vagrant/.env
+    content: "BACKEND_HOST=192.168.56.13\n"
+    owner: devops
+    group: devops
+
+- name: Deploy frontend container
+  become_user: devops
+  shell: docker-compose -f docker-compose.frontend.yml up -d --build
+  args:
+    chdir: /vagrant
+
+- name: Deploy metrics sidecar container
+  become_user: devops
+  shell: docker-compose -f docker-compose.sidecar.yml up -d --build
+  args:
+    chdir: /vagrant

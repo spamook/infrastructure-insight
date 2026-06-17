@@ -1,0 +1,66 @@
+
+---
+- name: Install base packages
+  apt:
+    name:
+      - curl
+      - wget
+      - git
+      - ufw
+      - sshguard
+      - python3
+      - rsync
+    state: present
+
+- name: Create devops group
+  group:
+    name: devops
+    state: present
+
+- name: Create devops user
+  user:
+    name: devops
+    groups: devops,sudo
+    shell: /bin/bash
+    create_home: yes
+    state: present
+
+- name: Allow devops passwordless sudo
+  copy:
+    dest: /etc/sudoers.d/devops
+    content: "devops ALL=(ALL) NOPASSWD:ALL\n"
+    validate: 'visudo -cf %s'
+
+- name: Create .ssh directory for devops
+  file:
+    path: /home/devops/.ssh
+    state: directory
+    owner: devops
+    group: devops
+    mode: '0700'
+
+- name: Disable SSH password authentication
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PasswordAuthentication'
+    line: 'PasswordAuthentication no'
+  notify: restart sshd
+
+- name: Disable SSH root login
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^#?PermitRootLogin'
+    line: 'PermitRootLogin no'
+  notify: restart sshd
+
+- name: Enable UFW with default deny
+  ufw:
+    state: enabled
+    policy: deny
+    direction: incoming
+
+- name: Allow SSH
+  ufw:
+    rule: allow
+    port: '22'
+    proto: tcp

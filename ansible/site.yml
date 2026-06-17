@@ -1,0 +1,37 @@
+## main file  : who/what/get  setup
+
+---
+- name: Provision server
+  hosts: all
+  # sudo allow
+  become: yes
+
+  pre_tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+  roles:
+    # users / ssh/ ufw
+    - common
+
+    #  docker needed servers
+    - role: docker
+      when: ansible_hostname in ['app-server', 'web-server-1', 'web-server-2', 'ci-server']
+
+
+    - role: app-server
+      when: ansible_hostname == 'app-server'
+
+    - role: web-server
+      when: ansible_hostname in ['web-server-1', 'web-server-2']
+
+    - role: load-balancer
+      when: ansible_hostname == 'load-balancer'
+
+    - role: backup-server
+      when: ansible_hostname == 'backup-server'
+
+    - role: ci-server
+      when: ansible_hostname == 'ci-server'

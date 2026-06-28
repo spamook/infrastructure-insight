@@ -11,9 +11,9 @@
     port: '5000'
     proto: tcp
 
-- name: Install Java 17
+- name: Install Java 21
   apt:
-    name: openjdk-17-jdk
+    name: openjdk-21-jdk
     state: present
 - name: Create keyrings directory
   file:

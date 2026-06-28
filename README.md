@@ -165,8 +165,7 @@ The `Vagrantfile` uses the `ansible_local` provisioner. Vagrant installs Ansible
 
 **ci-server**:
 - Opens ports 8080 (Jenkins) and 5000 (Docker registry)
-- Installs Java 17 and Jenkins
-- Skips the Jenkins setup wizard
+- Installs Java 21 and Jenkins (fetches GPG key by ID from keyserver)
 - Adds `jenkins` to the docker group
 - Starts a Docker registry container (`registry:2`) on port 5000
 - Copies the Jenkins private SSH key to `/var/lib/jenkins/.ssh/id_ed25519`
@@ -221,8 +220,20 @@ Jenkins uses an ED25519 SSH key to authenticate to all servers. The private key 
 
 ### Setting up the pipeline job
 
-After `vagrant up`, create the pipeline job in Jenkins UI once:
+After `vagrant up`, do the following once:
 
+**1. Restart Docker on ci-server** (required to pick up insecure registry config):
+```bash
+vagrant ssh ci-server -- sudo systemctl restart docker
+```
+
+**2. Unlock Jenkins** at `http://192.168.56.15:8080`:
+```bash
+vagrant ssh ci-server -- sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+```
+Paste the password into the Jenkins unlock page, then install suggested plugins and create an admin user.
+
+**3. Create the pipeline job:**
 1. New Item → name it `infra-insight` → select Pipeline
 2. Under Pipeline: Definition → `Pipeline script from SCM`
 3. SCM → Git, repository URL, branch `master`

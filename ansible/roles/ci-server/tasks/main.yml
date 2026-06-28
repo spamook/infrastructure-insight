@@ -95,12 +95,14 @@
 
 - name: Add servers to Jenkins known_hosts
   shell: |
-    ssh-keyscan -H 192.168.56.11 >> /var/lib/jenkins/.ssh/known_hosts
-    ssh-keyscan -H 192.168.56.12 >> /var/lib/jenkins/.ssh/known_hosts
-    ssh-keyscan -H 192.168.56.13 >> /var/lib/jenkins/.ssh/known_hosts
+    ssh-keyscan -H -T 10 192.168.56.11 >> /var/lib/jenkins/.ssh/known_hosts || true
+    ssh-keyscan -H -T 10 192.168.56.12 >> /var/lib/jenkins/.ssh/known_hosts || true
+    ssh-keyscan -H -T 10 192.168.56.13 >> /var/lib/jenkins/.ssh/known_hosts || true
   become_user: jenkins
 
 - name: Restart Jenkins to pick up docker group
   service:
     name: jenkins
     state: restarted
+  async: 120
+  poll: 5

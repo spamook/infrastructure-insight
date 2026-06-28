@@ -33,10 +33,18 @@
     mode: '0644'
     force: yes
 
-- name: Add Jenkins repository
-  apt_repository:
-    repo: 'deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/'
-    state: present
+- name: Remove all old Jenkins apt source files
+  shell: find /etc/apt/sources.list.d/ -name '*jenkins*' -delete
+  changed_when: false
+
+- name: Write Jenkins repository file
+  copy:
+    dest: /etc/apt/sources.list.d/jenkins.list
+    content: "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/\n"
+    mode: '0644'
+
+- name: Update apt cache after adding Jenkins repo
+  apt:
     update_cache: yes
 
 - name: Install Jenkins

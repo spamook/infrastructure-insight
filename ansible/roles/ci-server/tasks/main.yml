@@ -21,16 +21,21 @@
     state: directory
     mode: '0755'
 
+- name: Remove old Jenkins GPG key if present
+  file:
+    path: /etc/apt/keyrings/jenkins-keyring.gpg
+    state: absent
+
 - name: Download Jenkins GPG key
-  shell: |
-    curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | \
-    gpg --dearmor -o /etc/apt/keyrings/jenkins-keyring.gpg
-  args:
-    creates: /etc/apt/keyrings/jenkins-keyring.gpg
+  get_url:
+    url: https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+    dest: /etc/apt/keyrings/jenkins-keyring.asc
+    mode: '0644'
+    force: yes
 
 - name: Add Jenkins repository
   apt_repository:
-    repo: 'deb [signed-by=/etc/apt/keyrings/jenkins-keyring.gpg] https://pkg.jenkins.io/debian-stable binary/'
+    repo: 'deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/'
     state: present
     update_cache: yes
 

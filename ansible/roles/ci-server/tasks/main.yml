@@ -15,14 +15,22 @@
   apt:
     name: openjdk-17-jdk
     state: present
-- name: Add Jenkins apt key
-  apt_key:
-    url: https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
-    state: present
+- name: Create keyrings directory
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Download Jenkins GPG key
+  shell: |
+    curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | \
+    gpg --dearmor -o /etc/apt/keyrings/jenkins-keyring.gpg
+  args:
+    creates: /etc/apt/keyrings/jenkins-keyring.gpg
 
 - name: Add Jenkins repository
   apt_repository:
-    repo: 'deb https://pkg.jenkins.io/debian-stable binary/'
+    repo: 'deb [signed-by=/etc/apt/keyrings/jenkins-keyring.gpg] https://pkg.jenkins.io/debian-stable binary/'
     state: present
     update_cache: yes
 

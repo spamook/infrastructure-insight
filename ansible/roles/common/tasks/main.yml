@@ -10,6 +10,7 @@
       - sshguard
       - python3
       - rsync
+      - acl
     state: present
 
 - name: Create devops group

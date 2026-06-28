@@ -15,6 +15,8 @@ Vagrant.configure("2") do |config|
       node.vm.network "private_network", ip: cfg[:ip]
       node.vm.synced_folder ".", "/vagrant"
 
+      node.vm.boot_timeout = 600
+
       node.vm.provider "virtualbox" do |vb|
         vb.name   = server_name
         vb.memory = cfg[:memory]

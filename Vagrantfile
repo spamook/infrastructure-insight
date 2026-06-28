@@ -25,6 +25,7 @@ Vagrant.configure("2") do |config|
         ansible.playbook       = "ansible/site.yml"
         ansible.inventory_path = "ansible/inventory.ini"
         ansible.install        = true
+        ansible.limit          = "all"
       end
     end
   end

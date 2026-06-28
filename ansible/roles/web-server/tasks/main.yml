@@ -22,12 +22,16 @@
 
 - name: Deploy frontend container
   become_user: devops
-  shell: docker-compose -f docker-compose.frontend.yml up -d --build
+  shell: |
+    docker-compose -f docker-compose.frontend.yml down --remove-orphans 2>/dev/null || true
+    docker-compose -f docker-compose.frontend.yml up -d --build
   args:
     chdir: /vagrant
 
 - name: Deploy metrics sidecar container
   become_user: devops
-  shell: docker-compose -f docker-compose.sidecar.yml up -d --build
+  shell: |
+    docker-compose -f docker-compose.sidecar.yml down --remove-orphans 2>/dev/null || true
+    docker-compose -f docker-compose.sidecar.yml up -d --build
   args:
     chdir: /vagrant

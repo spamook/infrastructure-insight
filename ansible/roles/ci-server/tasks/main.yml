@@ -21,17 +21,12 @@
     state: directory
     mode: '0755'
 
-- name: Remove old Jenkins GPG key if present
-  file:
-    path: /etc/apt/keyrings/jenkins-keyring.gpg
-    state: absent
-
-- name: Download Jenkins GPG key
-  get_url:
-    url: https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
-    dest: /etc/apt/keyrings/jenkins-keyring.asc
-    mode: '0644'
-    force: yes
+- name: Fetch Jenkins GPG key from keyserver
+  shell: |
+    gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 7198F4B714ABFC68
+    gpg --export 7198F4B714ABFC68 > /etc/apt/keyrings/jenkins-keyring.gpg
+  args:
+    creates: /etc/apt/keyrings/jenkins-keyring.gpg
 
 - name: Remove all old Jenkins apt source files
   shell: find /etc/apt/sources.list.d/ -name '*jenkins*' -delete
@@ -40,7 +35,7 @@
 - name: Write Jenkins repository file
   copy:
     dest: /etc/apt/sources.list.d/jenkins.list
-    content: "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/\n"
+    content: "deb [signed-by=/etc/apt/keyrings/jenkins-keyring.gpg] https://pkg.jenkins.io/debian-stable binary/\n"
     mode: '0644'
 
 - name: Update apt cache after adding Jenkins repo

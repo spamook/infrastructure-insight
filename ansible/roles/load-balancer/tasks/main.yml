@@ -64,7 +64,7 @@
 - name: Allow devops to reload nginx without password
   copy:
     dest: /etc/sudoers.d/nginx-reload
-    content: "devops ALL=(ALL) NOPASSWD: /usr/sbin/nginx\n"
+    content: "devops ALL=(ALL) NOPASSWD: /usr/sbin/nginx, /usr/bin/tee /etc/nginx/conf.d/lb.conf\n"
     validate: 'visudo -cf %s'
 
 - name: Schedule adaptive LB script via cron

@@ -2,7 +2,7 @@
 
 
 TEMPLATE="/vagrant/load-balancer/nginx.conf.template"
-CONF="/vagrant/load-balancer/nginx.conf"
+CONF="/etc/nginx/conf.d/lb.conf"
 LOG="/var/log/adaptive_lb.log"
 METRICS_PORT=3001
 
@@ -54,7 +54,7 @@ echo "[$TS] weights -> web1=$W1  web2=$W2" >> "$LOG"
 
 sed -e "s/WEB1_WEIGHT/$W1/g" \
     -e "s/WEB2_WEIGHT/$W2/g" \
-    "$TEMPLATE" > "$CONF"
+    "$TEMPLATE" | sudo tee "$CONF" > /dev/null
 
 if sudo nginx -t 2>/dev/null; then
     sudo nginx -s reload

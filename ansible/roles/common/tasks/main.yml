@@ -39,6 +39,12 @@
     group: devops
     mode: '0700'
 
+- name: Add Jenkins deploy key to devops authorized_keys
+  authorized_key:
+    user: devops
+    key: "{{ lookup('file', '/vagrant/ansible/files/jenkins_key.pub') }}"
+    state: present
+
 - name: Disable SSH password authentication
   lineinfile:
     path: /etc/ssh/sshd_config

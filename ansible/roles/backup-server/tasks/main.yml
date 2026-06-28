@@ -15,6 +15,7 @@
 
 - name: Create backup log file
   file:
+
     path: /var/log/backup.log
     state: touch
     owner: devops

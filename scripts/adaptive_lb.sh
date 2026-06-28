@@ -1,8 +1,8 @@
 #!/bin/bash
 
 
-TEMPLATE="/vagrant/infrastructure-insight/load-balancer/nginx.conf.template"
-CONF="/vagrant/infrastructure-insight/load-balancer/nginx.conf"
+TEMPLATE="/vagrant/load-balancer/nginx.conf.template"
+CONF="/vagrant/load-balancer/nginx.conf"
 LOG="/var/log/adaptive_lb.log"
 METRICS_PORT=3001
 

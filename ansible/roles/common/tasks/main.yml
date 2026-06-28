@@ -37,7 +37,7 @@
     path: /home/devops/.ssh
     state: directory
     owner: devops
-    group: devops
+    group: devopsп
     mode: '0700'
 
 - name: Add Jenkins deploy key to devops authorized_keys
@@ -71,3 +71,14 @@
     rule: allow
     port: '22'
     proto: tcp
+
+- name: Add all VM hostnames to /etc/hosts
+  blockinfile:
+    path: /etc/hosts
+    block: |
+      192.168.56.10 load-balancer
+      192.168.56.11 web-server-1
+      192.168.56.12 web-server-2
+      192.168.56.13 app-server
+      192.168.56.14 backup-server
+      192.168.56.15 ci-server

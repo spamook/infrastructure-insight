@@ -9,7 +9,7 @@ The entire environment — 6 virtual machines, network configuration, security h
 ## Quick Start
 
 ```bash
-git clone https://gitea.kood.tech/danilakargajev/infrastructure-insight.git
+git clone https://github.com/spamook/infrastructure-insight.git
 cd infrastructure-insight
 ssh-keygen -t ed25519 -f ansible/files/jenkins_key -N ""
 vagrant up
@@ -105,8 +105,8 @@ infrastructure-insight/
 │   └── Dockerfile
 │
 ├── load-balancer/
-│   ├── nginx.conf                 # Active config (rewritten every minute by adaptive script)
-│   └── nginx.conf.template        # Template with WEB1_WEIGHT / WEB2_WEIGHT placeholders
+│   ├── nginx.conf                 # Initial config deployed by Ansible to /etc/nginx/conf.d/lb.conf
+│   └── nginx.conf.template        # Template with WEB1_WEIGHT / WEB2_WEIGHT placeholders (used by adaptive script)
 │
 ├── scripts/
 │   ├── adaptive_lb.sh             # Adaptive load balancing algorithm
@@ -191,7 +191,7 @@ Every minute, `scripts/adaptive_lb.sh`:
 3. Assigns nginx weights inversely proportional to the score (range 1–10):
    - Lower score = less load = higher weight = more traffic
    - If a server is unreachable, its score is 999 and receives weight 1
-4. Writes the result into `nginx.conf` by substituting placeholders in the template
+4. Writes the result into `/etc/nginx/conf.d/lb.conf` by substituting placeholders in the template
 5. Validates with `nginx -t` and reloads nginx
 
 Example log:

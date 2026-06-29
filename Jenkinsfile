@@ -20,8 +20,12 @@ pipeline {
 
         stage('Push') {
             steps {
+                sh 'docker tag $REGISTRY/backend:latest $REGISTRY/backend:$BUILD_NUMBER'
+                sh 'docker tag $REGISTRY/frontend:latest $REGISTRY/frontend:$BUILD_NUMBER'
                 sh 'docker push $REGISTRY/backend:latest'
+                sh 'docker push $REGISTRY/backend:$BUILD_NUMBER'
                 sh 'docker push $REGISTRY/frontend:latest'
+                sh 'docker push $REGISTRY/frontend:$BUILD_NUMBER'
             }
         }
 

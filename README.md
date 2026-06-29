@@ -2,20 +2,20 @@
 
 A full-stack infrastructure monitoring application with fully automated provisioning, configuration management, and CI/CD pipeline.
 
-The entire environment — 6 virtual machines, network configuration, security hardening, application deployment, and CI/CD — is created with a single command.
+6 virtual machines, network configuration, security hardening, application deployment, and CI/CD — created with a single command.
 
 ---
 
 ## Quick Start
 
 ```bash
-git clone https://github.com/spamook/infrastructure-insight.git
-cd infrastructure-insight
+git clone https://gitea.kood.tech/danilakargajev/automation-alchemy.git
+cd automation-alchemy
 ssh-keygen -t ed25519 -f ansible/files/jenkins_key -N ""
 vagrant up
 ```
 
-The application will be available at `http://192.168.56.10` after provisioning completes (15-30 minutes).
+The application will be available at `http://192.168.56.10` after provisioning completes (15–30 minutes).
 
 ---
 
@@ -34,19 +34,17 @@ The application will be available at `http://192.168.56.10` after provisioning c
 [Browser]
     |
     v
-[Load Balancer]  192.168.56.10  nginx + adaptive load balancing algorithm
+[Load Balancer]   192.168.56.10  nginx + adaptive load balancing
     |
-    +---------> [Web Server 1]  192.168.56.11  frontend + metrics sidecar
-    +---------> [Web Server 2]  192.168.56.12  frontend + metrics sidecar
-                      |
-                      v
-               [App Server]     192.168.56.13  backend API (Node.js/Express)
+    +-----------> [Web Server 1]  192.168.56.11  frontend + metrics sidecar
+    +-----------> [Web Server 2]  192.168.56.12  frontend + metrics sidecar
+                        |
+                        v
+                 [App Server]     192.168.56.13  backend API (Node.js/Express)
 
-[CI Server]    192.168.56.15  Jenkins + Docker private registry
-[Backup Server] 192.168.56.14  weekly rsync backups
+[CI Server]      192.168.56.15  Jenkins + Docker private registry
+[Backup Server]  192.168.56.14  weekly rsync backups
 ```
-
-### VM Summary
 
 | VM | IP | RAM | Role |
 |----|----|-----|------|
@@ -77,9 +75,10 @@ The application will be available at `http://192.168.56.10` after provisioning c
 ## Project Structure
 
 ```
-infrastructure-insight/
+automation-alchemy/
 ├── Vagrantfile                    # 6 VM definitions with ansible_local provisioner
-├── Jenkinsfile                    # CI/CD pipeline (Build > Push > Deploy)
+├── Jenkinsfile                    # CI/CD pipeline (Build > Push > Deploy > Smoke Test)
+├── Jenkinsfile.rollback           # Parameterized rollback pipeline
 │
 ├── ansible/
 │   ├── site.yml                   # Main playbook — assigns roles by hostname
@@ -88,13 +87,13 @@ infrastructure-insight/
 │   ├── files/
 │   │   └── jenkins_key.pub        # Jenkins SSH public key (distributed to all VMs)
 │   └── roles/
-│       ├── common/                # Base packages, devops user, SSH hardening, UFW
+│       ├── common/                # Base packages, devops user, SSH hardening, UFW, /etc/hosts
 │       ├── docker/                # Docker CE, docker-compose, insecure registry config
 │       ├── app-server/            # Firewall rules, backend container deployment
 │       ├── web-server/            # Firewall rules, frontend + sidecar deployment
 │       ├── load-balancer/         # nginx, adaptive_lb.sh, cron every minute
 │       ├── backup-server/         # backup.sh, restore.sh, cron every Sunday
-│       └── ci-server/             # Jenkins, Docker registry, SSH deploy key
+│       └── ci-server/             # Jenkins, Docker registry, SSH deploy key, notifications log
 │
 ├── backend/
 │   ├── src/                       # Express API source (TypeScript)
@@ -106,7 +105,7 @@ infrastructure-insight/
 │
 ├── load-balancer/
 │   ├── nginx.conf                 # Initial config deployed by Ansible to /etc/nginx/conf.d/lb.conf
-│   └── nginx.conf.template        # Template with WEB1_WEIGHT / WEB2_WEIGHT placeholders (used by adaptive script)
+│   └── nginx.conf.template        # Template with WEB1_WEIGHT / WEB2_WEIGHT placeholders
 │
 ├── scripts/
 │   ├── adaptive_lb.sh             # Adaptive load balancing algorithm
@@ -120,21 +119,15 @@ infrastructure-insight/
 
 ---
 
-## Automation
-
-### Vagrant + ansible_local
-
-The `Vagrantfile` uses the `ansible_local` provisioner. Vagrant installs Ansible inside each VM, and the VM configures itself by running `ansible/site.yml`. This approach works on Windows, where Ansible cannot run as a control node.
-
-### Ansible Roles
+## Ansible Roles
 
 **common** — runs on every VM:
-- Installs base packages: curl, wget, git, ufw, sshguard, rsync
+- Installs base packages: curl, wget, git, ufw, sshguard, rsync, acl
 - Creates `devops` group and user with passwordless sudo
-- Creates `.ssh` directory and adds the Jenkins public key to `authorized_keys`
-- Disables SSH password authentication (`PasswordAuthentication no`)
-- Disables root login (`PermitRootLogin no`)
+- Adds the Jenkins public key to `devops` authorized_keys
+- Disables SSH password authentication and root login
 - Enables UFW with default deny-incoming, allows port 22
+- Adds all VM hostnames to `/etc/hosts` for hostname resolution
 
 **docker** — runs on app-server, web servers, ci-server:
 - Installs Docker CE and docker-compose from the official Docker repository
@@ -143,9 +136,8 @@ The `Vagrantfile` uses the `ansible_local` provisioner. Vagrant installs Ansible
 
 **load-balancer**:
 - Installs nginx and jq
-- Deploys nginx config and template from `/vagrant/load-balancer/`
+- Deploys nginx config and template
 - Copies `adaptive_lb.sh` to `/home/devops/scripts/`
-- Creates `/var/log/adaptive_lb.log`
 - Adds sudoers rule for nginx reload without password
 - Schedules cron job every minute
 
@@ -165,15 +157,16 @@ The `Vagrantfile` uses the `ansible_local` provisioner. Vagrant installs Ansible
 
 **ci-server**:
 - Opens ports 8080 (Jenkins) and 5000 (Docker registry)
-- Installs Java 21 and Jenkins (fetches GPG key by ID from keyserver)
+- Installs Java 21 and Jenkins
 - Adds `jenkins` to the docker group
-- Starts a Docker registry container (`registry:2`) on port 5000
-- Copies the Jenkins private SSH key to `/var/lib/jenkins/.ssh/id_ed25519`
-- Adds web-server-1, web-server-2, and app-server to `known_hosts`
+- Starts a Docker registry container on port 5000
+- Copies Jenkins private SSH key to `/var/lib/jenkins/.ssh/id_ed25519`
+- Adds deployment servers to `known_hosts`
+- Creates `/var/log/jenkins-notifications.log`
 
 ### Idempotency
 
-All Ansible tasks are idempotent. Running `vagrant provision` multiple times does not cause unintended changes — tasks that find the system already in the desired state report `ok` and skip execution.
+All Ansible tasks are idempotent. Running `vagrant provision` multiple times does not cause unintended changes.
 
 ---
 
@@ -207,18 +200,29 @@ Example log:
 
 Jenkins is accessible at `http://192.168.56.15:8080`.
 
-The `Jenkinsfile` defines four stages:
+### Main pipeline (`Jenkinsfile`)
 
 | Stage | Action |
 |-------|--------|
-| Build | Build Docker images for backend and frontend on ci-server |
-| Push | Push images to the local registry at `192.168.56.15:5000` |
+| Build | Build Docker images for backend and frontend |
+| Push | Push images to registry with `latest` and `$BUILD_NUMBER` tags |
 | Deploy backend | SSH to app-server, pull image, restart container |
 | Deploy frontend | SSH to web-server-1 and web-server-2, pull image, restart containers |
+| Smoke Test | Verify backend API and load balancer respond with HTTP 200 |
 
-Jenkins uses an ED25519 SSH key to authenticate to all servers. The private key is stored at `/var/lib/jenkins/.ssh/id_ed25519` (installed by Ansible). The public key is distributed to all VMs by the `common` role.
+After every build, the result is written to `/var/log/jenkins-notifications.log` on ci-server.
 
-### Setting up the pipeline job
+### Rollback pipeline (`Jenkinsfile.rollback`)
+
+A separate parameterized job that rolls back to any previous build:
+
+1. Takes `ROLLBACK_BUILD` parameter (build number, e.g. `5`)
+2. Pulls the versioned image tag from registry (`backend:5`, `frontend:5`)
+3. Redeploys on all servers
+4. Runs smoke tests to confirm the rollback succeeded
+5. Writes result to the notifications log
+
+### Setting up Jenkins
 
 After `vagrant up`, do the following once:
 
@@ -231,16 +235,21 @@ vagrant ssh ci-server -- sudo systemctl restart docker
 ```bash
 vagrant ssh ci-server -- sudo cat /var/lib/jenkins/secrets/initialAdminPassword
 ```
-Paste the password into the Jenkins unlock page, then install suggested plugins and create an admin user.
+Paste the password into the Jenkins unlock page, install suggested plugins, create an admin user.
 
-**3. Create the pipeline job:**
-1. New Item → name it `infra-insight` → select Pipeline
-2. Under Pipeline: Definition → `Pipeline script from SCM`
+**3. Create the main pipeline job:**
+1. New Item → `infra-insight` → Pipeline
+2. Definition → `Pipeline script from SCM`
 3. SCM → Git, repository URL, branch `master`
 4. Script Path → `Jenkinsfile`
 5. Save → Build Now
 
-After that, every push to the repository can trigger the pipeline automatically via a webhook.
+**4. Create the rollback job:**
+1. New Item → `infra-insight-rollback` → Pipeline
+2. Definition → `Pipeline script from SCM`
+3. SCM → Git, repository URL, branch `master`
+4. Script Path → `Jenkinsfile.rollback`
+5. Save
 
 ---
 
@@ -251,8 +260,8 @@ After that, every push to the repository can trigger the pipeline automatically 
 - UFW firewall enabled on all VMs with deny-incoming by default
 - Each VM only opens ports required for its specific role
 - `devops` is the only login-capable user on all VMs
-- `sshguard` is installed on all VMs to block brute-force attempts
-- The Jenkins SSH private key is in `.gitignore` and is never committed to the repository
+- `sshguard` blocks brute-force SSH attempts on all VMs
+- The Jenkins SSH private key is in `.gitignore` and is never committed
 
 ### Firewall Rules
 
@@ -274,7 +283,7 @@ Generate the Jenkins deploy key pair once before running `vagrant up`:
 ssh-keygen -t ed25519 -f ansible/files/jenkins_key -N ""
 ```
 
-The private key (`ansible/files/jenkins_key`) is listed in `.gitignore` and must never be committed. The public key (`ansible/files/jenkins_key.pub`) is committed to the repository and distributed automatically by Ansible.
+The private key (`ansible/files/jenkins_key`) is in `.gitignore` and must never be committed. The public key (`ansible/files/jenkins_key.pub`) is committed and distributed automatically by Ansible.
 
 ---
 
@@ -351,4 +360,11 @@ vagrant ssh app-server -- docker ps
 
 # Check Jenkins logs
 vagrant ssh ci-server -- sudo journalctl -u jenkins -f
+
+# Monitor CI/CD notifications
+vagrant ssh ci-server -- sudo tail -f /var/log/jenkins-notifications.log
+
+# Check Docker registry contents
+curl http://192.168.56.15:5000/v2/_catalog
+curl http://192.168.56.15:5000/v2/backend/tags/list
 ```

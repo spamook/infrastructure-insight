@@ -48,6 +48,17 @@ pipeline {
                 '''
             }
         }
+
+        stage('Smoke Test') {
+            steps {
+                sh 'sleep 10'
+                sh 'curl -f --max-time 10 http://$APP_SERVER:3001/metrics || (echo "Backend health check failed" && exit 1)'
+                sh 'curl -f --max-time 10 http://192.168.56.10 || (echo "Load balancer health check failed" && exit 1)'
+                sh 'curl -f --max-time 10 http://$WEB1 || (echo "Web server 1 health check failed" && exit 1)'
+                sh 'curl -f --max-time 10 http://$WEB2 || (echo "Web server 2 health check failed" && exit 1)'
+                echo 'All smoke tests passed'
+            }
+        }
     }
 
     post {

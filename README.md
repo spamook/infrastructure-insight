@@ -1,4 +1,4 @@
-# Infrastructure Insight
+# Automation Alchemy
 
 A full-stack infrastructure monitoring application with fully automated provisioning, configuration management, and CI/CD pipeline.
 

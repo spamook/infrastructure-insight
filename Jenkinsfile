@@ -62,7 +62,20 @@ pipeline {
     }
 
     post {
-        success { echo 'Deployment complete' }
-        failure { echo 'Deployment failed'  }
+        success {
+            sh '''
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] BUILD #$BUILD_NUMBER SUCCESS - all stages passed, app is live" \
+                >> /var/log/jenkins-notifications.log
+            '''
+        }
+        failure {
+            sh '''
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] BUILD #$BUILD_NUMBER FAILED - check console: http://192.168.56.15:8080/job/infra-insight/$BUILD_NUMBER/console" \
+                >> /var/log/jenkins-notifications.log
+            '''
+        }
+        always {
+            sh 'tail -5 /var/log/jenkins-notifications.log'
+        }
     }
 }

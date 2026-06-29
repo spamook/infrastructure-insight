@@ -100,6 +100,14 @@
     ssh-keyscan -H -T 10 192.168.56.13 >> /var/lib/jenkins/.ssh/known_hosts || true
   become_user: jenkins
 
+- name: Create Jenkins notifications log file
+  file:
+    path: /var/log/jenkins-notifications.log
+    state: touch
+    owner: jenkins
+    group: jenkins
+    mode: '0644'
+
 - name: Restart Jenkins to pick up docker group
   service:
     name: jenkins
